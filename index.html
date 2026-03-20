@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gravity Well Playground</title>
+  <meta name="description" content="A mesmerising orbital sandbox where you place gravity wells on a dark canvas and watch hundreds of particles bend, spiral, and slingshot around them in real time.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://gravitywell.builtbycrew.online/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Gravity Well Playground">
+  <meta property="og:description" content="A mesmerising orbital sandbox where you place gravity wells on a dark canvas and watch hundreds of particles bend, spiral, and slingshot around them in real time.">
+  <meta property="og:url" content="https://gravitywell.builtbycrew.online/">
+  <meta property="og:site_name" content="BuiltByCrew">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Gravity Well Playground">
+  <meta name="twitter:description" content="A mesmerising orbital sandbox where you place gravity wells on a dark canvas and watch hundreds of particles bend, spiral, and slingshot around them in real time.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%231B1464'/><circle cx='16' cy='16' r='5' fill='%23E8522A'/><circle cx='16' cy='16' r='2' fill='%23F5EFE0'/></svg>">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rockwell+Nova:wght@400;700&family=Special+Elite&display=swap');
+
+    :root {
+      --cream: #F5EFE0;
+      --indigo: #1B1464;
+      --rust: #E8522A;
+      --sky: #A8C5DA;
+      --indigo-mid: #2D2080;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--indigo);
+      font-family: 'Special Elite', 'Courier New', monospace;
+    }
+
+    #canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* Logotype pill — top-left */
+    #logotype {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 10;
+      background: var(--indigo);
+      border: 2px solid var(--cream);
+      color: var(--cream);
+      font-family: 'Rockwell Nova', Rockwell, 'Courier New', serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 3px;
+      pointer-events: none;
+      user-select: none;
+      /* Risograph offset shadow */
+      box-shadow: 3px 3px 0 var(--rust);
+      animation: logoEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes logoEnter {
+      from { opacity: 0; transform: translateY(-12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hint overlay — bottom-left */
+    #hint {
+      position: fixed;
+      bottom: 52px;
+      left: 18px;
+      z-index: 10;
+      color: var(--cream);
+      font-family: 'Special Elite', 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      opacity: 0.75;
+      pointer-events: none;
+      user-select: none;
+      line-height: 1.6;
+      animation: hintEnter 1s 0.5s ease both, hintFade 0.8s 5s ease forwards;
+    }
+
+    @keyframes hintEnter {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 0.75; transform: translateX(0); }
+    }
+
+    @keyframes hintFade {
+      to { opacity: 0; }
+    }
+
+    /* Footer */
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      text-align: center;
+      padding: 8px 16px;
+      font-family: 'Special Elite', 'Courier New', monospace;
+      font-size: 11px;
+      color: rgba(245, 239, 224, 0.45);
+      background: rgba(27, 20, 100, 0.6);
+      backdrop-filter: blur(4px);
+      letter-spacing: 0.04em;
+      pointer-events: auto;
+    }
+
+    footer a {
+      color: rgba(168, 197, 218, 0.7);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: var(--sky);
+    }
+
+    footer svg {
+      display: inline;
+      vertical-align: middle;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="canvas"></canvas>
+
+  <div id="logotype">Gravity Well Playground</div>
+
+  <div id="hint">
+    click to add well &nbsp;·&nbsp; right-click to remove<br>
+    scroll to adjust mass &nbsp;·&nbsp; long-press to remove (mobile)
+  </div>
+
+  <footer>
+    <span>Built by <a href="https://builtbycrew.online/" target="_blank" rel="noopener">BuiltByCrew</a> — a new app every day</span>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/BuiltByCrew/gravitywell" target="_blank" rel="noopener" aria-label="View source on GitHub">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+    </a>
+    &nbsp;·&nbsp;
+    <a href="https://buymeacoffee.com/builtbycrew" target="_blank" rel="noopener">☕ Buy me a coffee</a>
+  </footer>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // ─── Constants ───────────────────────────────────────────────────────────
+    const G              = 3200;       // gravitational constant (tuned)
+    const MAX_PARTICLES  = 300;
+    const MAX_WELLS      = 12;
+    const MIN_DIST       = 18;         // singularity guard (px)
+    const MAX_SPEED      = 340;        // px/s velocity cap
+    const MASS_MIN       = 20;
+    const MASS_MAX       = 600;
+    const TRAIL_ALPHA    = 0.13;       // how much the trail fades each frame
+    const SPAWN_INTERVAL = 120;        // ms between particle top-ups
+
+    // Risograph palette
+    const PALETTE = ['#1B1464', '#E8522A', '#A8C5DA', '#F5EFE0', '#2D2080', '#C0392B', '#7FB3CC'];
+    const PARTICLE_COLORS = ['#E8522A', '#A8C5DA', '#F5EFE0', '#C9A96E', '#7FB3CC', '#D4A5A5'];
+
+    // ─── State ────────────────────────────────────────────────────────────────
+    let wells     = [];
+    let particles = [];
+    let lastTime  = 0;
+    let lastSpawn = 0;
+    let W = 0, H = 0;
+
+    // ─── Canvas setup ─────────────────────────────────────────────────────────
+    const canvas = document.getElementById('canvas');
+    const ctx    = canvas.getContext('2d');
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ─── Halftone grain overlay (offscreen) ──────────────────────────────────
+    let grainCanvas, grainCtx;
+    function buildGrain() {
+      grainCanvas = document.createElement('canvas');
+      grainCanvas.width  = 256;
+      grainCanvas.height = 256;
+      grainCtx = grainCanvas.getContext('2d');
+      const id = grainCtx.createImageData(256, 256);
+      const d  = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const v = Math.random() > 0.5 ? 255 : 0;
+        d[i] = d[i+1] = d[i+2] = v;
+        d[i+3] = Math.random() * 22;
+      }
+      grainCtx.putImageData(id, 0, 0);
+    }
+    buildGrain();
+
+    // ─── Gravity Well ─────────────────────────────────────────────────────────
+    class Well {
+      constructor(x, y, mass = 120) {
+        this.x    = x;
+        this.y    = y;
+        this.mass = Math.max(MASS_MIN, Math.min(MASS_MAX, mass));
+        this.born = performance.now();
+        this.ring = 0; // animated ring radius
+      }
+
+      get radius() {
+        return 6 + Math.sqrt(this.mass) * 0.55;
+      }
+
+      draw(t) {
+        const r  = this.radius;
+        const pulse = 1 + 0.08 * Math.sin(t * 0.003 + this.born * 0.001);
+
+        // Outer glow rings — risograph concentric
+        for (let i = 3; i >= 1; i--) {
+          const ringR = r * (1 + i * 0.55) * pulse;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(168, 197, 218, ${0.06 / i})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // Core glow
+        ctx.save();
+        ctx.shadowColor  = '#E8522A';
+        ctx.shadowBlur   = 28 + 10 * Math.sin(t * 0.004);
+
+        // Core circle — indigo fill with rust border
+        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r * pulse);
+        grad.addColorStop(0,   '#F5EFE0');
+        grad.addColorStop(0.4, '#E8522A');
+        grad.addColorStop(1,   '#1B1464');
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, r * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.strokeStyle = '#E8522A';
+        ctx.lineWidth   = 1.5;
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Crosshair marks — printed feel
+        ctx.save();
+        ctx.strokeStyle = 'rgba(245,239,224,0.35)';
+        ctx.lineWidth   = 0.8;
+        ctx.setLineDash([2, 3]);
+        const arm = r * 2.2;
+        ctx.beginPath();
+        ctx.moveTo(this.x - arm, this.y); ctx.lineTo(this.x + arm, this.y);
+        ctx.moveTo(this.x, this.y - arm); ctx.lineTo(this.x, this.y + arm);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+
+    // ─── Particle ─────────────────────────────────────────────────────────────
+    class Particle {
+      constructor(x, y, vx, vy) {
+        this.x    = x;
+        this.y    = y;
+        this.vx   = vx;
+        this.vy   = vy;
+        this.life = 1;
+        this.color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
+        this.size  = 1.2 + Math.random() * 1.4;
+        this.age   = 0;
+        // slight color bleed offset (risograph registration error)
+        this.bleedX = (Math.random() - 0.5) * 1.5;
+        this.bleedY = (Math.random() - 0.5) * 1.5;
+      }
+
+      update(dt) {
+        // Apply gravity from each well
+        for (const w of wells) {
+          const dx   = w.x - this.x;
+          const dy   = w.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 1) continue;
+          const safeDist = Math.max(dist, MIN_DIST);
+          const force    = (G * w.mass) / (safeDist * safeDist * safeDist);
+          this.vx += dx * force * dt;
+          this.vy += dy * force * dt;
+        }
+
+        // Velocity cap
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > MAX_SPEED) {
+          const inv = MAX_SPEED / speed;
+          this.vx *= inv;
+          this.vy *= inv;
+        }
+
+        this.x   += this.vx * dt;
+        this.y   += this.vy * dt;
+        this.age += dt;
+      }
+
+      get alive() {
+        // Kill if escaped far off-canvas
+        return this.x > -400 && this.x < W + 400 && this.y > -400 && this.y < H + 400;
+      }
+
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+
+        // Risograph bleed (secondary color ghost)
+        ctx.beginPath();
+        ctx.arc(this.x + this.bleedX, this.y + this.bleedY, this.size * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = '#1B1464';
+        ctx.globalAlpha = 0.25;
+        ctx.fill();
+
+        // Main dot
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.9;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur  = 4;
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    // ─── Spawn helpers ────────────────────────────────────────────────────────
+    function spawnParticle() {
+      if (wells.length === 0) return;
+
+      // Pick a random edge or orbit spawn
+      const edge = Math.random();
+      let x, y, vx, vy;
+
+      if (edge < 0.4 && wells.length > 0) {
+        // Orbital spawn around a random well
+        const w   = wells[Math.floor(Math.random() * wells.length)];
+        const ang = Math.random() * Math.PI * 2;
+        const r   = 80 + Math.random() * 160;
+        x  = w.x + Math.cos(ang) * r;
+        y  = w.y + Math.sin(ang) * r;
+        // Tangential velocity for orbit
+        const orbitSpeed = Math.sqrt((G * w.mass) / Math.max(r, MIN_DIST)) * (0.6 + Math.random() * 0.5);
+        vx =  Math.sin(ang) * orbitSpeed * (Math.random() < 0.5 ? 1 : -1);
+        vy = -Math.cos(ang) * orbitSpeed * (Math.random() < 0.5 ? 1 : -1);
+      } else {
+        // Edge spawn
+        const side = Math.floor(Math.random() * 4);
+        switch (side) {
+          case 0: x = Math.random() * W; y = -10;    vx = (Math.random()-0.5)*60; vy =  40+Math.random()*60; break;
+          case 1: x = W+10;              y = Math.random()*H; vx = -(40+Math.random()*60); vy = (Math.random()-0.5)*60; break;
+          case 2: x = Math.random() * W; y = H+10;   vx = (Math.random()-0.5)*60; vy = -(40+Math.random()*60); break;
+          default: x = -10;             y = Math.random()*H; vx =  40+Math.random()*60; vy = (Math.random()-0.5)*60; break;
+        }
+      }
+
+      particles.push(new Particle(x, y, vx, vy));
+    }
+
+    function spawnInitialParticles() {
+      for (let i = 0; i < 180; i++) {
+        // Pick a well to orbit around
+        const w   = wells[i % wells.length];
+        const ang = Math.random() * Math.PI * 2;
+        const r   = 50 + Math.random() * 220;
+        const x   = w.x + Math.cos(ang) * r;
+        const y   = w.y + Math.sin(ang) * r;
+        const orbitSpeed = Math.sqrt((G * w.mass) / Math.max(r, MIN_DIST)) * (0.55 + Math.random() * 0.6);
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        const vx  =  Math.sin(ang) * orbitSpeed * dir + (Math.random()-0.5)*20;
+        const vy  = -Math.cos(ang) * orbitSpeed * dir + (Math.random()-0.5)*20;
+        particles.push(new Particle(x, y, vx, vy));
+      }
+    }
+
+    // ─── Default wells ────────────────────────────────────────────────────────
+    function addDefaultWells() {
+      wells.push(new Well(W * 0.35, H * 0.45, 180));
+      wells.push(new Well(W * 0.65, H * 0.52, 140));
+      spawnInitialParticles();
+    }
+
+    // ─── Nearest well ─────────────────────────────────────────────────────────
+    function nearestWell(x, y) {
+      let nearest = null, minD = Infinity;
+      for (const w of wells) {
+        const d = Math.hypot(w.x - x, w.y - y);
+        if (d < minD) { minD = d; nearest = w; }
+      }
+      return { well: nearest, dist: minD };
+    }
+
+    // ─── Render ──────────────────────────────────────────────────────────────
+    function render(t) {
+      // Trail fade — alpha compositing gives the motion-blur feel
+      ctx.save();
+      ctx.globalAlpha = TRAIL_ALPHA;
+      ctx.fillStyle = '#0D0A38';   // deep indigo, slightly darker than #1B1464
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+
+      // Grain overlay (tiled)
+      ctx.save();
+      ctx.globalAlpha = 0.04;
+      const pat = ctx.createPattern(grainCanvas, 'repeat');
+      ctx.fillStyle = pat;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+
+      // Particles
+      for (const p of particles) p.draw();
+
+      // Wells
+      for (const w of wells) w.draw(t);
+    }
+
+    // ─── Main loop ────────────────────────────────────────────────────────────
+    function loop(t) {
+      const dt  = Math.min((t - lastTime) / 1000, 0.05); // cap at 50ms for tab-switch safety
+      lastTime  = t;
+
+      // Particle top-up
+      if (t - lastSpawn > SPAWN_INTERVAL && particles.length < MAX_PARTICLES) {
+        const need = Math.min(3, MAX_PARTICLES - particles.length);
+        for (let i = 0; i < need; i++) spawnParticle();
+        lastSpawn = t;
+      }
+
+      // Update particles
+      for (const p of particles) p.update(dt);
+
+      // Cull dead particles
+      particles = particles.filter(p => p.alive);
+
+      render(t);
+
+      requestAnimationFrame(loop);
+    }
+
+    // ─── Initial draw (so canvas isn't blank before first RAF) ───────────────
+    function initialPaint() {
+      ctx.fillStyle = '#0D0A38';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // ─── Mouse events ─────────────────────────────────────────────────────────
+    canvas.addEventListener('click', (e) => {
+      if (e.button !== 0) return;
+      if (wells.length >= MAX_WELLS) wells.shift(); // remove oldest if cap hit
+      wells.push(new Well(e.clientX, e.clientY, 120));
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const { well } = nearestWell(e.clientX, e.clientY);
+      if (well) wells = wells.filter(w => w !== well);
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const { well, dist } = nearestWell(e.clientX, e.clientY);
+      if (!well || dist > 200) return;
+      const delta = e.deltaY < 0 ? 20 : -20;
+      well.mass = Math.max(MASS_MIN, Math.min(MASS_MAX, well.mass + delta));
+    }, { passive: false });
+
+    // ─── Touch events ─────────────────────────────────────────────────────────
+    let touchStartTime   = 0;
+    let touchStartX      = 0;
+    let touchStartY      = 0;
+    let longPressTimer   = null;
+    let pinchStartDist   = null;
+    let pinchWell        = null;
+    let pinchStartMass   = null;
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+
+      if (e.touches.length === 2) {
+        // Pinch start
+        const t0 = e.touches[0], t1 = e.touches[1];
+        pinchStartDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const mx = (t0.clientX + t1.clientX) / 2;
+        const my = (t0.clientY + t1.clientY) / 2;
+        const { well } = nearestWell(mx, my);
+        pinchWell      = well;
+        pinchStartMass = well ? well.mass : null;
+        return;
+      }
+
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchStartTime = performance.now();
+
+      // Long-press to remove
+      longPressTimer = setTimeout(() => {
+        const { well } = nearestWell(touchStartX, touchStartY);
+        if (well) wells = wells.filter(w => w !== well);
+        longPressTimer = null;
+      }, 600);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+
+      if (e.touches.length === 2 && pinchWell && pinchStartDist !== null) {
+        const t0 = e.touches[0], t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const ratio = dist / pinchStartDist;
+        pinchWell.mass = Math.max(MASS_MIN, Math.min(MASS_MAX, pinchStartMass * ratio));
+        return;
+      }
+
+      // Cancel long-press if finger moves
+      const touch = e.touches[0];
+      const moved = Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY);
+      if (moved > 10 && longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        // Short tap → add well
+        const elapsed = performance.now() - touchStartTime;
+        if (elapsed < 600) {
+          if (wells.length >= MAX_WELLS) wells.shift();
+          wells.push(new Well(touchStartX, touchStartY, 120));
+        }
+      }
+
+      pinchStartDist = null;
+      pinchWell      = null;
+      pinchStartMass = null;
+    }, { passive: false });
+
+    // ─── Boot ─────────────────────────────────────────────────────────────────
+    initialPaint();
+    addDefaultWells();
+    requestAnimationFrame((t) => {
+      lastTime  = t;
+      lastSpawn = t;
+      requestAnimationFrame(loop);
+    });
+
+  })();
+  </script>
+
+</body>
+</html>
